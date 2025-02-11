@@ -8,12 +8,13 @@
     "@testing-library/user-event": "^13.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.5",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scrivpts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -34,5 +35,15 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@types/draft-js": "^0.11.18",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.7.3"
   }
 }

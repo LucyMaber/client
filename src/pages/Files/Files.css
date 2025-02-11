@@ -1,0 +1,33 @@
+/* src/HomePage.css */
+.homepage {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .homepage-header {
+    background-color: #282c34;
+    color: white;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .homepage-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .upload-section,
+  .graph-section {
+    border: 1px solid #ccc;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  .upload-section h2,
+  .graph-section h2 {
+    margin-top: 0;
+  }
+  
