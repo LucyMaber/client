@@ -8,9 +8,12 @@ import React, {
 } from "react";
 import { TagData } from "../../types/TagData";
 import { SelectionRange } from "../../types/Doc";
+// Adjusted the path to match the actual location of your TagProvider file.
+import { useTagContext } from "../../providers/TagProvider";
 
+// --------------------- Props Interface ---------------------
 interface CreateTagPopupProps {
-  onSave: (tagData: TagData) => void;
+  onSubmit: (tagData: TagData) => void;
   onCancel: () => void;
   // For file connection tags:
   targetFile?: { id: string; name: string };
@@ -56,11 +59,13 @@ const saveButtonStyle: CSSProperties = {
 
 // --------------------- CreateTagPopup Component ---------------------
 const CreateTagPopup: FC<CreateTagPopupProps> = ({
-  onSave,
   onCancel,
   targetFile,
   highlightedText,
 }) => {
+  // Access createTag from TagProvider via context.
+  const { createTag } = useTagContext();
+
   // Common fields
   const [tagType, setTagType] = useState<string>("generic");
   const [tagColor, setTagColor] = useState<string>("#00796b");
@@ -87,15 +92,14 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
 
   // File Connection Tag states
   const [subjectFileId, setSubjectFileId] = useState<string>("");
-  const [relationshipPredicate, setRelationshipPredicate] =
-    useState<string>(""); // Added state
+  const [relationshipPredicate, setRelationshipPredicate] = useState<string>("");
 
   // Highlight Connection Tag states
   const [highlightPredicate, setHighlightPredicate] = useState<string>("");
   const [highlightObject, setHighlightObject] = useState<string>("");
 
   // --------------------- Save Handler ---------------------
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     const relatedArray = relatedTags
       .split(",")
       .map((t) => t.trim())
@@ -186,7 +190,6 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
         }
         break;
       case "fileConnection":
-        // For file connection tags, set the subject as an object using the user‑provided subjectFileId.
         tagData.subject = {
           id: subjectFileId.trim(),
           name: subjectFileId.trim(),
@@ -206,7 +209,6 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
         tagData.name = `${
           highlightedText.name
         } -- ${highlightPredicate.trim()} --> ${highlightObject.trim()}`;
-        // For highlight connections, store the highlighted text object as the subject.
         tagData.subject = highlightedText;
         tagData.relationshipPredicate = highlightPredicate.trim();
         break;
@@ -214,7 +216,11 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
         break;
     }
 
-    onSave(tagData);
+    try {
+      await createTag(tagData);
+    } catch (error) {
+      console.error("Error creating tag:", error);
+    }
 
     // Reset fields after saving.
     setTagType("generic");
@@ -233,6 +239,9 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
     setSubjectFileId("");
     setHighlightPredicate("");
     setHighlightObject("");
+
+    // Close the popup (or perform any additional actions)
+    onCancel();
   }, [
     tagType,
     tagName,
@@ -252,7 +261,8 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
     highlightObject,
     highlightedText,
     targetFile,
-    onSave,
+    createTag,
+    onCancel,
   ]);
 
   // --------------------- Render JSX ---------------------
@@ -516,7 +526,7 @@ const CreateTagPopup: FC<CreateTagPopupProps> = ({
                 background: "#f9f9f9",
               }}
             >
-              {targetFile?.name || "No highlighted text provided"}
+              {targetFile?.name || "No file provided"}
             </div>
           </div>
           <div style={{ marginBottom: "10px" }}>

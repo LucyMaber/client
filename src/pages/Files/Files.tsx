@@ -541,10 +541,10 @@ function FileBrowser() {
       {/* Create Tag Popup */}
       {showCreateTagPopup && (
         <CreateTagPopup
-          onSave={handleSaveTag}
           onCancel={handleCancelTag}
-          targetFile={selectedSourceFile}
-        />
+          targetFile={selectedSourceFile} onSubmit={function (tagData: TagData): void {
+            throw new Error('Function not implemented.');
+          } }        />
       )}
 
       {previewFile && <FilePreviewModal file={previewFile} onClose={closeFilePreview} />}

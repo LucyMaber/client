@@ -538,7 +538,7 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
         />
       </div>
       {showCreateTagPopup && (
-        <CreateTagPopup onSave={handleCreateTag} onCancel={() => setShowCreateTagPopup(false)} />
+        <CreateTagPopup onSubmit={handleCreateTag} onCancel={() => setShowCreateTagPopup(false)} />
       )}
     </div>
   );
