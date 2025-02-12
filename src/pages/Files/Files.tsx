@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-
+import TagSelector from "../../components/Tagg/TagSelector";
 import NavigationBar from "../../components/Files/NavigationBar";
 import NavigationPane from "../../components/Files/NavigationPane";
 import SplitView from "../../components/Files/SplitView";
 import ContentPane from "../../components/Files/ContentPane";
 import FilePreviewModal from "../../components/Files/FilePreviewModal";
 import ContextMenu from "../../components/Files/ContextMenu";
+import CreateTagPopup from "../../components/Tagg/CreateTagPopup";
+import { TagData } from '../../types/TagData';
 
 // ===================== In‑Memory File System =====================
 const initialFileSystem = {
   id: 'root',
   name: 'Root',
-  tags: [], // Root folder tags
+  tags: [],
   folders: [
     {
       id: 'folder1',
@@ -31,9 +33,9 @@ const initialFileSystem = {
               mimeType: 'image/png',
               fileType: 'png',
               tags: []
-            },
-          ],
-        },
+            }
+          ]
+        }
       ],
       files: [
         {
@@ -43,8 +45,8 @@ const initialFileSystem = {
           mimeType: 'text/plain',
           fileType: 'txt',
           tags: []
-        },
-      ],
+        }
+      ]
     },
     {
       id: 'folder2',
@@ -59,9 +61,9 @@ const initialFileSystem = {
           mimeType: 'application/pdf',
           fileType: 'pdf',
           tags: []
-        },
-      ],
-    },
+        }
+      ]
+    }
   ],
   files: [
     {
@@ -71,35 +73,35 @@ const initialFileSystem = {
       mimeType: 'video/mp4',
       fileType: 'mp4',
       tags: []
-    },
-  ],
+    }
+  ]
 };
 
 // ---------------- Helper Functions ----------------
-function getFolderByPath(fs, path) {
+function getFolderByPath(fs: any, path: string[]) {
   let current = fs;
   for (let i = 1; i < path.length; i++) {
-    current = current.folders.find((f) => f.id === path[i]);
+    current = current.folders.find((f: any) => f.id === path[i]);
     if (!current) return null;
   }
   return current;
 }
 
-function updateFolderInFS(fs, path, updater) {
+function updateFolderInFS(fs: any, path: string[], updater: (folder: any) => any) {
   if (path.length === 1) {
     return updater(fs);
   }
   return {
     ...fs,
-    folders: fs.folders.map((folder) =>
+    folders: fs.folders.map((folder: any) =>
       folder.id === path[1]
         ? updateFolderInFS(folder, path.slice(1), updater)
         : folder
-    ),
+    )
   };
 }
 
-function findFileInFS(fs, fileId) {
+function findFileInFS(fs: any, fileId: string): { folder: any; file: any } | null {
   for (let file of fs.files) {
     if (file.id === fileId) return { folder: fs, file };
   }
@@ -110,7 +112,7 @@ function findFileInFS(fs, fileId) {
   return null;
 }
 
-function findFolderPath(fs, folderId, currentPath = ['root']) {
+function findFolderPath(fs: any, folderId: string, currentPath: string[] = ['root']): string[] | null {
   if (fs.id === folderId) return currentPath;
   for (let folder of fs.folders) {
     const result = findFolderPath(folder, folderId, [...currentPath, folder.id]);
@@ -120,7 +122,7 @@ function findFolderPath(fs, folderId, currentPath = ['root']) {
 }
 
 // -------------------- Drag-and-Drop Handler --------------------
-function processDropItem(prevFS, targetPath, itemDataJson) {
+function processDropItem(prevFS: any, targetPath: string[], itemDataJson: string) {
   const data = JSON.parse(itemDataJson);
   if (data.type === 'file') {
     const result = findFileInFS(prevFS, data.id);
@@ -128,32 +130,31 @@ function processDropItem(prevFS, targetPath, itemDataJson) {
     const { folder: sourceFolder, file } = result;
     const target = getFolderByPath(prevFS, targetPath);
     if (!target) return prevFS;
-    if (sourceFolder.id === target.id) return prevFS; // no change if same folder
+    if (sourceFolder.id === target.id) return prevFS;
     const sourcePath = findFolderPath(prevFS, sourceFolder.id);
-    let newFS = updateFolderInFS(prevFS, sourcePath, (folder) => ({
+    let newFS = updateFolderInFS(prevFS, sourcePath!, (folder: any) => ({
       ...folder,
-      files: folder.files.filter((f) => f.id !== data.id),
+      files: folder.files.filter((f: any) => f.id !== data.id)
     }));
-    newFS = updateFolderInFS(newFS, targetPath, (folder) => ({
+    newFS = updateFolderInFS(newFS, targetPath, (folder: any) => ({
       ...folder,
-      files: [...folder.files, file],
+      files: [...folder.files, file]
     }));
     return newFS;
   } else if (data.type === 'folder') {
-    // Prevent moving root or moving a folder into itself/descendant.
     const sourcePath = findFolderPath(prevFS, data.id);
     if (!sourcePath || sourcePath.length < 2) return prevFS;
     if (targetPath.includes(data.id)) return prevFS;
     const folderToMove = getFolderByPath(prevFS, sourcePath);
     if (!folderToMove) return prevFS;
     const parentPath = sourcePath.slice(0, -1);
-    let newFS = updateFolderInFS(prevFS, parentPath, (parentFolder) => ({
+    let newFS = updateFolderInFS(prevFS, parentPath, (parentFolder: any) => ({
       ...parentFolder,
-      folders: parentFolder.folders.filter((f) => f.id !== data.id),
+      folders: parentFolder.folders.filter((f: any) => f.id !== data.id)
     }));
-    newFS = updateFolderInFS(newFS, targetPath, (targetFolder) => ({
+    newFS = updateFolderInFS(newFS, targetPath, (targetFolder: any) => ({
       ...targetFolder,
-      folders: [...targetFolder.folders, folderToMove],
+      folders: [...targetFolder.folders, folderToMove]
     }));
     return newFS;
   }
@@ -161,29 +162,28 @@ function processDropItem(prevFS, targetPath, itemDataJson) {
 }
 
 // -------------------- Tag Update Helper Functions --------------------
-function updateFileTags(fs, fileId, newTags) {
+function updateFileTags(fs: any, fileId: string, newTags: string[]) {
   const result = findFileInFS(fs, fileId);
   if (!result) return fs;
   const { folder, file } = result;
   const updatedFile = { ...file, tags: newTags };
   const folderPath = findFolderPath(fs, folder.id);
-  return updateFolderInFS(fs, folderPath, (folder) => ({
+  return updateFolderInFS(fs, folderPath!, (folder: any) => ({
     ...folder,
-    files: folder.files.map((f) => (f.id === fileId ? updatedFile : f)),
+    files: folder.files.map((f: any) => (f.id === fileId ? updatedFile : f))
   }));
 }
 
-function updateFolderTags(fs, folderId, newTags) {
+function updateFolderTags(fs: any, folderId: string, newTags: string[]) {
   const folderPath = findFolderPath(fs, folderId);
   if (!folderPath) return fs;
-  return updateFolderInFS(fs, folderPath, (folder) => ({
+  return updateFolderInFS(fs, folderPath, (folder: any) => ({
     ...folder,
-    tags: newTags,
+    tags: newTags
   }));
 }
 
-function updateItemTags(fs, item, newTags) {
-  // If the item has mimeType and fileType, assume it's a file; otherwise, treat it as a folder.
+function updateItemTags(fs: any, item: any, newTags: string[]) {
   if (item.mimeType !== undefined && item.fileType !== undefined) {
     return updateFileTags(fs, item.id, newTags);
   } else {
@@ -192,16 +192,16 @@ function updateItemTags(fs, item, newTags) {
 }
 
 // ===================== Main App Component =====================
-function App() {
-  // Global file system state.
+function FileBrowser() {
+  // ---------------- Global File System State ----------------
   const [fileSystem, setFileSystem] = useState(initialFileSystem);
-  const [currentPath, setCurrentPath] = useState(['root']);
-  const [backStack, setBackStack] = useState([]);
-  const [forwardStack, setForwardStack] = useState([]);
+  const [currentPath, setCurrentPath] = useState<string[]>(['root']);
+  const [backStack, setBackStack] = useState<string[][]>([]);
+  const [forwardStack, setForwardStack] = useState<string[][]>([]);
   const currentFolder = getFolderByPath(fileSystem, currentPath);
 
-  // Source Navigation Handlers
-  const handleBreadcrumbSelect = (newPath) => {
+  // ---------------- Navigation Handlers ----------------
+  const handleBreadcrumbSelect = (newPath: string[]) => {
     if (JSON.stringify(newPath) !== JSON.stringify(currentPath)) {
       setBackStack([...backStack, currentPath]);
       setForwardStack([]);
@@ -209,7 +209,7 @@ function App() {
     }
   };
 
-  const handleSelectFolder = (newPath) => {
+  const handleSelectFolder = (newPath: string[]) => {
     if (JSON.stringify(newPath) !== JSON.stringify(currentPath)) {
       setBackStack([...backStack, currentPath]);
       setForwardStack([]);
@@ -217,7 +217,7 @@ function App() {
     }
   };
 
-  const handleOpenFolderFromContents = (folderId) => {
+  const handleOpenFolderFromContents = (folderId: string) => {
     if (!currentFolder) return;
     const newPath = [...currentPath, folderId];
     setBackStack([...backStack, currentPath]);
@@ -245,39 +245,35 @@ function App() {
     setCurrentPath([...currentPath]);
   };
 
-  // ===================== View Mode State =====================
-  const [viewModes, setViewModes] = useState({});
-  const currentViewMode = viewModes[currentFolder?.id] || 'icons';
-
-  const handleChangeViewMode = (mode) => {
+  // -------------------- View Mode & Split View State --------------------
+  const [viewModes, setViewModes] = useState<any>({});
+  const currentViewMode = currentFolder ? viewModes[currentFolder.id] || 'icons' : 'icons';
+  const handleChangeViewMode = (mode: string) => {
     if (currentFolder) {
       setViewModes({ ...viewModes, [currentFolder.id]: mode });
     }
   };
 
-  // ===================== Split View State =====================
   const [splitView, setSplitView] = useState(false);
-  const [targetPath, setTargetPath] = useState(['root']);
+  const [targetPath, setTargetPath] = useState<string[]>(['root']);
   const targetFolder = getFolderByPath(fileSystem, targetPath);
-  const [targetViewModes, setTargetViewModes] = useState({});
-  const targetViewMode = targetFolder ? (targetViewModes[targetFolder.id] || 'icons') : 'icons';
+  const [targetViewModes, setTargetViewModes] = useState<any>({});
+  const targetViewMode = targetFolder ? targetViewModes[targetFolder.id] || 'icons' : 'icons';
 
   const toggleSplitView = () => {
     setSplitView(!splitView);
   };
 
-  // Target Navigation State
-  const [targetBackStack, setTargetBackStack] = useState([]);
-  const [targetForwardStack, setTargetForwardStack] = useState([]);
-
-  const handleTargetBreadcrumbSelect = (newPath) => {
+  // -------------------- Target Navigation State --------------------
+  const [targetBackStack, setTargetBackStack] = useState<string[][]>([]);
+  const [targetForwardStack, setTargetForwardStack] = useState<string[][]>([]);
+  const handleTargetBreadcrumbSelect = (newPath: string[]) => {
     if (JSON.stringify(newPath) !== JSON.stringify(targetPath)) {
       setTargetBackStack([...targetBackStack, targetPath]);
       setTargetForwardStack([]);
       setTargetPath(newPath);
     }
   };
-
   const handleTargetBack = () => {
     if (targetBackStack.length === 0) return;
     const previous = targetBackStack[targetBackStack.length - 1];
@@ -285,7 +281,6 @@ function App() {
     setTargetForwardStack([targetPath, ...targetForwardStack]);
     setTargetPath(previous);
   };
-
   const handleTargetForward = () => {
     if (targetForwardStack.length === 0) return;
     const next = targetForwardStack[0];
@@ -293,32 +288,28 @@ function App() {
     setTargetBackStack([...targetBackStack, targetPath]);
     setTargetPath(next);
   };
-
   const handleTargetReload = () => {
     setTargetPath([...targetPath]);
   };
 
-  // ===================== File Preview State =====================
-  const [previewFile, setPreviewFile] = useState(null);
-  const handleFilePreview = (file) => setPreviewFile(file);
+  // -------------------- File Preview & Operation State --------------------
+  const [previewFile, setPreviewFile] = useState<any>(null);
+  const handleFilePreview = (file: any) => setPreviewFile(file);
   const closeFilePreview = () => setPreviewFile(null);
 
-  // ===================== File Operation State =====================
-  // Separate selections for source and target panes.
-  const [selectedSourceFile, setSelectedSourceFile] = useState(null);
-  const [selectedTargetFile, setSelectedTargetFile] = useState(null);
+  const [selectedSourceFile, setSelectedSourceFile] = useState<any>(null);
+  const [selectedTargetFile, setSelectedTargetFile] = useState<any>(null);
 
-  // Operation handlers for source → target:
   const handleCopyFileSourceToTarget = () => {
     if (!selectedSourceFile) return;
     setFileSystem((prevFS) => {
       const target = getFolderByPath(prevFS, targetPath);
       if (!target) return prevFS;
-      // Copy the file and generate a new id while preserving mimeType and fileType.
+      // Copy file with a new id.
       const newFile = { ...selectedSourceFile, id: Date.now().toString() };
       const updatedTarget = {
         ...target,
-        files: [...target.files, newFile],
+        files: [...target.files, newFile]
       };
       return updateFolderInFS(prevFS, targetPath, () => updatedTarget);
     });
@@ -333,11 +324,11 @@ function App() {
       if (!source || !target) return prevFS;
       const updatedSource = {
         ...source,
-        files: source.files.filter((f) => f.id !== selectedSourceFile.id),
+        files: source.files.filter((f: any) => f.id !== selectedSourceFile.id)
       };
       const updatedTarget = {
         ...target,
-        files: [...target.files, selectedSourceFile],
+        files: [...target.files, selectedSourceFile]
       };
       let newFS = updateFolderInFS(prevFS, currentPath, () => updatedSource);
       newFS = updateFolderInFS(newFS, targetPath, () => updatedTarget);
@@ -346,7 +337,6 @@ function App() {
     setSelectedSourceFile(null);
   };
 
-  // Operation handlers for target → source:
   const handleCopyFileTargetToSource = () => {
     if (!selectedTargetFile) return;
     setFileSystem((prevFS) => {
@@ -355,7 +345,7 @@ function App() {
       const newFile = { ...selectedTargetFile, id: Date.now().toString() };
       const updatedSource = {
         ...source,
-        files: [...source.files, newFile],
+        files: [...source.files, newFile]
       };
       return updateFolderInFS(prevFS, currentPath, () => updatedSource);
     });
@@ -370,11 +360,11 @@ function App() {
       if (!source || !target) return prevFS;
       const updatedTarget = {
         ...target,
-        files: target.files.filter((f) => f.id !== selectedTargetFile.id),
+        files: target.files.filter((f: any) => f.id !== selectedTargetFile.id)
       };
       const updatedSource = {
         ...source,
-        files: [...source.files, selectedTargetFile],
+        files: [...source.files, selectedTargetFile]
       };
       let newFS = updateFolderInFS(prevFS, targetPath, () => updatedTarget);
       newFS = updateFolderInFS(newFS, currentPath, () => updatedSource);
@@ -383,34 +373,88 @@ function App() {
     setSelectedTargetFile(null);
   };
 
-  // ===================== Drag and Drop Handler =====================
-  const handleDropItem = (targetPath, itemDataJson) => {
-    setFileSystem((prevFS) => processDropItem(prevFS, targetPath, itemDataJson));
+  // -------------------- Drag and Drop Handler --------------------
+  const handleDropItem = (dropTargetPath: string[], itemDataJson: string) => {
+    setFileSystem((prevFS) => processDropItem(prevFS, dropTargetPath, itemDataJson));
   };
 
-  // ===================== Context Menu State =====================
-  const [contextMenu, setContextMenu] = useState(null);
-  const handleFileContextMenu = (file, event) => {
+  // -------------------- Context Menu State --------------------
+  const [contextMenu, setContextMenu] = useState<any>(null);
+  const handleFileContextMenu = (file: any, event: React.MouseEvent) => {
     event.preventDefault();
     setContextMenu({ x: event.clientX, y: event.clientY, file });
   };
   const closeContextMenu = () => setContextMenu(null);
-  const handleContextOpen = (file) => { handleFilePreview(file); };
-  const handleContextCopy = (file) => { console.log('Copy file:', file); };
-  const handleContextMove = (file) => { console.log('Move file:', file); };
-
-  // ===================== Tag Handler =====================
-  const handleTagItem = (item) => {
-    const currentTagsStr = item.tags && item.tags.length > 0 ? item.tags.join(', ') : '';
-    const newTagsStr = window.prompt("Enter tags (comma separated):", currentTagsStr);
-    if (newTagsStr !== null) {
-      const newTags = newTagsStr.split(',').map(tag => tag.trim()).filter(tag => tag);
-      setFileSystem(prevFS => updateItemTags(prevFS, item, newTags));
-    }
+  const handleContextOpen = (file: any) => {
+    handleFilePreview(file);
+    closeContextMenu();
+  };
+  const handleContextCopy = (file: any) => {
+    console.log('Copy file:', file);
+    closeContextMenu();
+  };
+  const handleContextMove = (file: any) => {
+    console.log('Move file:', file);
+    closeContextMenu();
   };
 
+  // -------------------- Tag Handler & Create Tag Popup --------------------
+  const handleTagItem = (item: any, newTags: string[]) => {
+    setFileSystem((prevFS) => updateItemTags(prevFS, item, newTags));
+  };
+
+  const [availableTags, setAvailableTags] = useState<any>([
+    { name: 'Important', color: '#ff0000', type: '' },
+    { name: 'Work', color: '#0000ff', type: '' },
+    { name: 'Personal', color: '#00ff00', type: '' }
+  ]);
+  const [showCreateTagPopup, setShowCreateTagPopup] = useState(false);
+
+  // When the global "Create Tag" button is pressed.
+  const handleCreateTag = () => {
+    setShowCreateTagPopup(true);
+  };
+
+  // Called when the CreateTagPopup saves a new tag.
+  const handleSaveTag = (tagData: TagData) => {
+    if (!availableTags.find((t: any) => t.name === tagData.name)) {
+      setAvailableTags([...availableTags, tagData]);
+    }
+    // If a file is selected, update its tags; otherwise update the current folder.
+    if (selectedSourceFile) {
+      const newTags = selectedSourceFile.tags ? [...selectedSourceFile.tags, tagData.name] : [tagData.name];
+      handleTagItem(selectedSourceFile, newTags);
+      setSelectedSourceFile(null);
+    } else if (currentFolder) {
+      const newTags = currentFolder.tags ? [...currentFolder.tags, tagData.name] : [tagData.name];
+      handleTagItem(currentFolder, newTags);
+    }
+    setShowCreateTagPopup(false);
+  };
+
+  const handleCancelTag = () => {
+    setShowCreateTagPopup(false);
+  };
+
+  // Toggle a tag for the current folder.
+  const handleToggleTag = (tagName: string) => {
+    if (!currentFolder) return;
+    const newTags = currentFolder.tags.includes(tagName)
+      ? currentFolder.tags.filter((t: string) => t !== tagName)
+      : [...currentFolder.tags, tagName];
+    handleTagItem(currentFolder, newTags);
+  };
+
+  // -------------------- Render JSX --------------------
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+      }}
+    >
       <NavigationBar
         currentPath={currentPath}
         onBack={handleBack}
@@ -422,6 +466,7 @@ function App() {
         onBreadcrumbSelect={handleBreadcrumbSelect}
         onToggleSplitView={toggleSplitView}
         splitView={splitView}
+        createTag={handleCreateTag}
       />
 
       <div style={{ display: 'flex', flex: 1 }}>
@@ -442,25 +487,21 @@ function App() {
               sourceViewMode={currentViewMode}
               targetViewMode={targetViewMode}
               onChangeSourceViewMode={handleChangeViewMode}
-              onChangeTargetViewMode={(mode) => {
-                if (targetFolder) setTargetViewModes({ ...targetViewModes, [targetFolder.id]: mode });
+              onChangeTargetViewMode={(mode: string) => {
+                if (targetFolder)
+                  setTargetViewModes({ ...targetViewModes, [targetFolder.id]: mode });
               }}
-              // Source pane selection
-              onSourceFileSelect={(file) => setSelectedSourceFile(file)}
+              onSourceFileSelect={(file: any) => setSelectedSourceFile(file)}
               selectedSourceFile={selectedSourceFile}
-              // Target pane selection
-              onTargetFileSelect={(file) => setSelectedTargetFile(file)}
+              onTargetFileSelect={(file: any) => setSelectedTargetFile(file)}
               selectedTargetFile={selectedTargetFile}
               onFilePreview={handleFilePreview}
-              // Operations: source → target
               onCopyFileSourceToTarget={handleCopyFileSourceToTarget}
               onMoveFileSourceToTarget={handleMoveFileSourceToTarget}
-              // Operations: target → source
               onCopyFileTargetToSource={handleCopyFileTargetToSource}
               onMoveFileTargetToSource={handleMoveFileTargetToSource}
-              onSelectTargetFolder={(folderId) => setTargetPath([...targetPath, folderId])}
+              onSelectTargetFolder={(folderId: string) => setTargetPath([...targetPath, folderId])}
               targetPath={targetPath}
-              // Source local navigation props
               sourceCurrentPath={currentPath}
               sourceBackStack={backStack}
               sourceForwardStack={forwardStack}
@@ -468,7 +509,6 @@ function App() {
               onSourceBack={handleBack}
               onSourceForward={handleForward}
               onSourceReload={handleReload}
-              // Target local navigation props
               targetCurrentPath={targetPath}
               targetBackStack={targetBackStack}
               targetForwardStack={targetForwardStack}
@@ -481,23 +521,34 @@ function App() {
             />
           ) : (
             <ContentPane
+              availableTags={availableTags}
               currentFolder={currentFolder}
               currentPath={currentPath}
               onOpenFolder={handleOpenFolderFromContents}
               viewMode={currentViewMode}
               onChangeViewMode={handleChangeViewMode}
               onFileClick={handleFilePreview}
-              onSelectFile={(file) => setSelectedSourceFile(file)}
+              onSelectFile={(file: any) => setSelectedSourceFile(file)}
               selectedFileId={selectedSourceFile ? selectedSourceFile.id : null}
               onFileContextMenu={handleFileContextMenu}
               onDropItem={handleDropItem}
-              onTagItem={handleTagItem}  // Pass the tag handler to allow editing tags
+              onTagItem={handleTagItem}
             />
           )}
         </div>
       </div>
 
+      {/* Create Tag Popup */}
+      {showCreateTagPopup && (
+        <CreateTagPopup
+          onSave={handleSaveTag}
+          onCancel={handleCancelTag}
+          targetFile={selectedSourceFile}
+        />
+      )}
+
       {previewFile && <FilePreviewModal file={previewFile} onClose={closeFilePreview} />}
+
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -513,4 +564,4 @@ function App() {
   );
 }
 
-export default App;
+export default FileBrowser;

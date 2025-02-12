@@ -1,6 +1,6 @@
 // src/components/CollaborativeEditor/TagSidebar.tsx
 import React, { useMemo } from 'react';
-import { TagData } from '../../pages/CollaborativeEditor/CollaborativeEditor';
+import { TagData } from '../../types/TagData';
 
 
 interface TagSidebarProps {

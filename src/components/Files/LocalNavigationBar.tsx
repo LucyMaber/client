@@ -1,9 +1,8 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { memo } from 'react';
 import Breadcrumb from './Breadcrumb';
 
-// Define external style objects
-const navStyle = {
+// Define external style objects with proper typing.
+const navStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '5px',
@@ -13,7 +12,7 @@ const navStyle = {
   fontSize: '0.9rem',
 };
 
-const buttonStyle = {
+const buttonStyle: React.CSSProperties = {
   padding: '4px 8px',
   border: 'none',
   background: '#ddd',
@@ -21,8 +20,20 @@ const buttonStyle = {
   cursor: 'pointer',
 };
 
-// LocalNavigationBar Component wrapped in React.memo for performance
-const LocalNavigationBar = React.memo(({
+// Define the props interface for LocalNavigationBar.
+interface LocalNavigationBarProps {
+  currentPath: string[];
+  onBack: () => void;
+  onForward: () => void;
+  onReload: () => void;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  fileSystem: any; // Replace 'any' with a more specific type if available.
+  onBreadcrumbSelect: (path: string[]) => void;
+}
+
+// LocalNavigationBar Component wrapped in React.memo for performance.
+const LocalNavigationBar: React.FC<LocalNavigationBarProps> = memo(({
   currentPath,
   onBack,
   onForward,
@@ -63,16 +74,5 @@ const LocalNavigationBar = React.memo(({
     />
   </div>
 ));
-
-LocalNavigationBar.propTypes = {
-  currentPath: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onBack: PropTypes.func.isRequired,
-  onForward: PropTypes.func.isRequired,
-  onReload: PropTypes.func.isRequired,
-  canGoBack: PropTypes.bool.isRequired,
-  canGoForward: PropTypes.bool.isRequired,
-  fileSystem: PropTypes.object.isRequired,
-  onBreadcrumbSelect: PropTypes.func.isRequired,
-};
 
 export default LocalNavigationBar;

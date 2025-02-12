@@ -1,38 +1,42 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 
 // External style objects
-const containerStyle = {
+const containerStyle: React.CSSProperties = {
   display: 'flex',
   gap: '5px',
   alignItems: 'center',
   fontSize: '0.9rem',
 };
 
-const itemStyle = {
+const itemStyle: React.CSSProperties = {
   cursor: 'pointer',
   textDecoration: 'underline',
   color: '#fff',
   transition: 'color 0.3s',
 };
 
-const separatorStyle = {
+const separatorStyle: React.CSSProperties = {
   color: '#fff',
 };
 
+// Optional: Define a type for the file system node.
+export interface FileSystemNode {
+  id: string;
+  name: string;
+  folders?: FileSystemNode[];
+}
+
 // Helper function to compute names based on the file system structure and current path.
-// Helper function to compute names based on the file system structure and current path.
-function getPathNames(fs, path) {
-  let names = [];
+function getPathNames(fs: FileSystemNode | null, path: string[]): string[] {
+  const names: string[] = [];
   let current = fs;
-  if (!current) return []; // safeguard in case fs is undefined
+  if (!current) return [];
   names.push(current.name);
-  
+
   // Start at index 1 since index 0 is assumed to be the root.
   for (let i = 1; i < path.length; i++) {
-    // Make sure current exists and has a folders array
     if (!current || !current.folders) break;
-    const next = current.folders.find((f) => f.id === path[i]);
+    const next: FileSystemNode | undefined = current.folders.find((f: FileSystemNode) => f.id === path[i]);
     if (next) {
       names.push(next.name);
       current = next;
@@ -43,9 +47,21 @@ function getPathNames(fs, path) {
   return names;
 }
 
+// Props interface for Breadcrumb
+interface BreadcrumbProps {
+  currentPath: string[];
+  fileSystem: FileSystemNode | null;
+  onSelect: (path: string[]) => void;
+  separator?: React.ReactNode;
+}
 
 // Breadcrumb component wrapped in React.memo for performance
-const Breadcrumb = React.memo(({ currentPath, fileSystem, onSelect, separator }) => {
+const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
+  currentPath,
+  fileSystem,
+  onSelect,
+  separator = ' / ',
+}) => {
   const names = getPathNames(fileSystem, currentPath);
 
   return (
@@ -57,8 +73,8 @@ const Breadcrumb = React.memo(({ currentPath, fileSystem, onSelect, separator })
             <span
               style={itemStyle}
               onClick={() => onSelect(pathForItem)}
-              onMouseOver={(e) => (e.target.style.color = '#ffdd57')}
-              onMouseOut={(e) => (e.target.style.color = '#fff')}
+              onMouseOver={(e) => ((e.target as HTMLElement).style.color = '#ffdd57')}
+              onMouseOut={(e) => ((e.target as HTMLElement).style.color = '#fff')}
             >
               {name}
             </span>
@@ -69,16 +85,5 @@ const Breadcrumb = React.memo(({ currentPath, fileSystem, onSelect, separator })
     </div>
   );
 });
-
-Breadcrumb.propTypes = {
-  currentPath: PropTypes.arrayOf(PropTypes.string).isRequired,
-  fileSystem: PropTypes.object.isRequired,
-  onSelect: PropTypes.func.isRequired,
-  separator: PropTypes.node,
-};
-
-Breadcrumb.defaultProps = {
-  separator: ' / ',
-};
 
 export default Breadcrumb;

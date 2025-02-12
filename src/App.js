@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Files from './pages/Files/Files';
-import CollaborativeEditor from './pages/CollaborativeEditor/CollaborativeEditor';
+import CollaborativeEditor from './pages/CollaborativeTagger/CollaborativeTagger';
 import './App.css';
 
 const App = () => {

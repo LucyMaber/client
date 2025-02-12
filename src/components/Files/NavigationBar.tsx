@@ -1,9 +1,22 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { memo } from 'react';
 import Breadcrumb from './Breadcrumb';
 
+interface NavigationBarProps {
+  currentPath: string[];
+  onBack: () => void;
+  onForward: () => void;
+  onReload: () => void;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  fileSystem: any; // Replace 'any' with a more specific type if available.
+  onBreadcrumbSelect: (newPath: string[]) => void;
+  onToggleSplitView: () => void;
+  splitView: boolean;
+  createTag: () => void;
+}
+
 // External styles object (won't be re-created on every render)
-const styles = {
+const styles: { [key: string]: React.CSSProperties } = {
   header: {
     padding: '10px 20px',
     background: 'linear-gradient(90deg, #4e54c8, #8f94fb)',
@@ -27,7 +40,7 @@ const styles = {
   },
 };
 
-const NavigationBar = React.memo(({
+const NavigationBar: React.FC<NavigationBarProps> = memo(({
   currentPath,
   onBack,
   onForward,
@@ -38,6 +51,7 @@ const NavigationBar = React.memo(({
   onBreadcrumbSelect,
   onToggleSplitView,
   splitView,
+  createTag,
 }) => {
   return (
     <div style={styles.header}>
@@ -67,24 +81,18 @@ const NavigationBar = React.memo(({
           onSelect={onBreadcrumbSelect}
         />
       </div>
+      <button
+        onClick={createTag}
+        style={styles.button}
+        aria-label="create Tag"
+      >
+        create Tag
+      </button>
       <button onClick={onToggleSplitView} style={styles.button}>
         {splitView ? 'Disable Split View' : 'Enable Split View'}
       </button>
     </div>
   );
 });
-
-NavigationBar.propTypes = {
-  currentPath: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onBack: PropTypes.func.isRequired,
-  onForward: PropTypes.func.isRequired,
-  onReload: PropTypes.func.isRequired,
-  canGoBack: PropTypes.bool.isRequired,
-  canGoForward: PropTypes.bool.isRequired,
-  fileSystem: PropTypes.object.isRequired,
-  onBreadcrumbSelect: PropTypes.func.isRequired,
-  onToggleSplitView: PropTypes.func.isRequired,
-  splitView: PropTypes.bool.isRequired,
-};
 
 export default NavigationBar;

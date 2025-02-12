@@ -1,4 +1,4 @@
-// Icons.js
+// Icons.tsx
 import React from 'react';
 import { 
   FaFolder, 
@@ -13,19 +13,24 @@ import {
   FaFileCode, 
   FaFileArchive 
 } from 'react-icons/fa';
+import { IconType } from 'react-icons';
 
-export const FolderIcon = ({ style }) => {
-  return <FaFolder style={style} />;
+interface IconProps {
+  style?: React.CSSProperties;
+}
+
+export const FolderIcon: React.FC<IconProps> = ({ style }) => {
+  return <span style={style}><FaFolder /></span>;
 };
 
-const getFileIconComponent = (mimeType, fileType) => {
+const getFileIconComponent = (mimeType?: string, fileType?: string): IconType => {
   // Check based on MIME type first
   if (mimeType) {
     if (mimeType.startsWith('image/')) return FaFileImage;
     if (mimeType.startsWith('video/')) return FaFileVideo;
     if (mimeType.startsWith('audio/')) return FaFileAudio;
     if (mimeType === 'application/pdf') return FaFilePdf;
-    // You can add additional MIME type checks here...
+    // Additional MIME type checks can be added here...
   }
   
   // Fallback: check based on file extension (fileType)
@@ -36,14 +41,19 @@ const getFileIconComponent = (mimeType, fileType) => {
     if (ext === 'ppt' || ext === 'pptx') return FaFilePowerpoint;
     if (ext === 'zip' || ext === 'rar' || ext === '7z' || ext === 'tar') return FaFileArchive;
     if (['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json'].includes(ext)) return FaFileCode;
-    // You can add additional file extension checks here...
+    // Additional file extension checks can be added here...
   }
   
   // Default icon if no match is found
   return FaFile;
 };
 
-export const FileIcon = ({ style, mimeType, fileType }) => {
+interface FileIconProps extends IconProps {
+  mimeType?: string;
+  fileType?: string;
+}
+
+export const FileIcon: React.FC<FileIconProps> = ({ style, mimeType, fileType }) => {
   const IconComponent = getFileIconComponent(mimeType, fileType);
-  return <IconComponent style={style} />;
+  return <span style={style}><IconComponent /></span>;
 };

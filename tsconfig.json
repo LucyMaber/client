@@ -12,8 +12,11 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"  // Use "react" if you're not on React 17+
+    "jsx": "react-jsx",
+    "outDir": "build",  // <-- Specify output directory
+    "declaration": false, // Prevents .d.ts file generation
+    "sourceMap": false, // Optional: Prevents generating .map files
+    "noEmit": false  // <-- Allow TypeScript to emit output files
   },
   "include": ["src"],
   "exclude": ["node_modules"]

@@ -1,8 +1,21 @@
-// ===================== File Preview Modal =====================
-function FilePreviewModal({ file, onClose }) {
-  const modalOverlay = {
+import React from 'react';
+
+interface FilePreviewModalProps {
+  file: {
+    name: string;
+    description: string;
+    // Add other file properties if needed.
+  };
+  onClose: () => void;
+}
+
+const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClose }) => {
+  const modalOverlay: React.CSSProperties = {
     position: 'fixed',
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.6)',
     display: 'flex',
     alignItems: 'center',
@@ -10,7 +23,7 @@ function FilePreviewModal({ file, onClose }) {
     zIndex: 3000,
   };
 
-  const modalContent = {
+  const modalContent: React.CSSProperties = {
     background: '#fff',
     padding: '30px',
     borderRadius: '8px',
@@ -20,7 +33,7 @@ function FilePreviewModal({ file, onClose }) {
     textAlign: 'center',
   };
 
-  const buttonStyle = {
+  const buttonStyle: React.CSSProperties = {
     marginTop: '15px',
     padding: '8px 16px',
     background: '#4e54c8',
@@ -36,11 +49,12 @@ function FilePreviewModal({ file, onClose }) {
       <div style={modalContent}>
         <h3 style={{ color: '#4e54c8' }}>Preview: {file.name}</h3>
         <p>{file.description}</p>
-        <button onClick={onClose} style={buttonStyle}>Close Preview</button>
+        <button onClick={onClose} style={buttonStyle}>
+          Close Preview
+        </button>
       </div>
     </div>
   );
-}
-
+};
 
 export default FilePreviewModal;

@@ -1,5 +1,5 @@
 // src/pages/CollaborativeEditor/CollaborativeEditor.tsx
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import {
   Editor,
   EditorState,
@@ -23,18 +23,14 @@ import {
 } from '../../Helper';
 import HighlightComponent from "../../components/CollaborativeEditor/HighlightComponent";
 import HighlightsDisplay from "../../components/CollaborativeEditor/HighlightsDisplay";
-
-// --- Dummy Text ---
-const dummyText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. 
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. 
-
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. 
-
-Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. 
-Nullam varius, turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. 
-Integer in mauris eu nibh euismod gravida.`;
+import { TagData } from '../../types/TagData';
+import {
+  CollaborativeEditorDraftProps,
+  EditingHighlight,
+  HighlightClickDetail,
+  SelectionRange
+} from '../../types/Doc';
+import { DocumentContext, DocumentProvider } from '../../providers/DocumentProvider';
 
 // ---------------------
 // Styling Objects
@@ -75,50 +71,6 @@ const popupStyle: React.CSSProperties = {
   width: '280px',
   transition: 'opacity 0.2s ease',
 };
-
-// ---------------------
-// Interfaces and Types
-// ---------------------
-
-// Updated TagData interface with optional description and other optional fields
-export interface TagData {
-  type: string;
-  color: string;
-  related: string[];
-  name: string;
-  description?: string;
-  latitude?: string | null;
-  longitude?: string | null;
-  entityId?: string;
-}
-
-interface Highlight {
-  blockKey: string;
-  text: string;
-  tags: string[];
-  entityKey: string;
-}
-
-interface SelectionRange {
-  blockKey: string;
-  start: number;
-  end: number;
-}
-
-interface EditingHighlight {
-  entityKey: string;
-  selectionRange: SelectionRange;
-  tags: string[];
-}
-
-interface CollaborativeEditorDraftProps {
-  initialContent?: string;
-  collaborativeSocket?: any; // Update with a proper type if available
-}
-
-interface HighlightClickDetail {
-  entityKey: string;
-}
 
 // ---------------------
 // Create a Decorator Dynamically
@@ -182,14 +134,22 @@ const getSelectionForEntityLocal = (
         }
       }
     );
-  });  
+  });
   console.log('Entity selection:', selection);
   return selection;
 };
 
+// Local interface for highlight details.
+interface LocalHighlight {
+  blockKey: string;
+  text: string;
+  tags: string[];
+  entityKey: string;
+}
+
 // Local version of getHighlights
-const getHighlightsLocal = (contentState: ContentState): Highlight[] => {
-  const highlights: Highlight[] = [];
+const getHighlightsLocal = (contentState: ContentState): LocalHighlight[] => {
+  const highlights: LocalHighlight[] = [];
   contentState.getBlockMap().forEach((block) => {
     if (!block) return;
     block.findEntityRanges(
@@ -216,29 +176,39 @@ const getHighlightsLocal = (contentState: ContentState): Highlight[] => {
 // Main Editor Component
 // ---------------------
 const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
-  initialContent = dummyText,
-  collaborativeSocket,
+  doc_id
 }) => {
+  // Get document content and loading status from the provider.
+  const { docContent,collaborativeSocket,isLoading } = useContext(DocumentContext);
+
+  // Project tags remain as before.
   const [projectTags, setProjectTags] = useState<TagData[]>([
     {
-      name: 'interesting', description: 'Default tag: interesting', color: '#FFC107',
-      type: '',
-      related: []
+      name: 'interesting',
+      description: 'Default tag: interesting',
+      color: '#FFC107',
+      type: 'generic',
+      related: [],
     },
     {
-      name: 'important', description: 'Important info', color: '#D32F2F',
-      type: '',
-      related: []
+      name: 'important',
+      description: 'Important info',
+      color: '#D32F2F',
+      type: 'generic',
+      related: [],
     },
     {
-      name: 'review', description: 'For review', color: '#1976D2',
-      type: '',
-      related: []
+      name: 'review',
+      description: 'For review',
+      color: '#1976D2',
+      type: 'generic',
+      related: [],
     },
   ]);
 
+  // Initialize the editor state with the document content.
   const [editorState, setEditorState] = useState<EditorState>(() => {
-    const contentState = ContentState.createFromText(initialContent);
+    const contentState = ContentState.createFromText(docContent);
     return EditorState.createWithContent(contentState, createDecorator(projectTags));
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -250,11 +220,18 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
   const savedSelectionRef = useRef<SelectionState | null>(null);
   const editorRef = useRef<Editor | null>(null);
 
+  // Update the decorator when projectTags change.
   useEffect(() => {
     setEditorState((prevState: EditorState) =>
       EditorState.set(prevState, { decorator: createDecorator(projectTags) })
     );
   }, [projectTags]);
+
+  // Reinitialize the editorState when docContent changes.
+  useEffect(() => {
+    const contentState = ContentState.createFromText(docContent);
+    setEditorState(EditorState.createWithContent(contentState, createDecorator(projectTags)));
+  }, [docContent, projectTags]);
 
   const onChange = useCallback((state: EditorState) => {
     setEditorState(state);
@@ -325,7 +302,7 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
     const contentState = editorState.getCurrentContent();
     let newContentState: ContentState;
     if (editingHighlight) {
-      // Merge new tags with the existing ones
+      // Merge new tags with the existing ones without overriding any tag.
       const existingTags = editingHighlight.tags || [];
       const mergedTags = Array.from(new Set([...existingTags, ...newTags]));
       console.log('Merged tags:', mergedTags);
@@ -339,6 +316,7 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
       console.log('No valid selection for applying highlight.');
       return;
     }
+    // Merge any overlapping highlights so that tags are combined (nested highlighting)
     newContentState = mergeOverlappingHighlights(newContentState);
     let newEditorState = EditorState.push(editorState, newContentState, 'apply-entity');
     newEditorState = EditorState.forceSelection(newEditorState, newEditorState.getSelection());
@@ -351,64 +329,82 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
     setSelectedTags([]);
   }, [selectedTags, editorState, editingHighlight, projectTags]);
 
+  /**
+   * Merges overlapping highlights by:
+   * 1. Iterating over each block and gathering all highlight intervals (their start, end, and tags).
+   * 2. Determining the unique boundary offsets.
+   * 3. For each sub-range (between adjacent boundaries), calculating the union of tags
+   *    from all intervals that cover that range.
+   * 4. Clearing any existing highlight entities in the block and reapplying a new entity
+   *    with the merged (nested) tags on each segment.
+   */
   const mergeOverlappingHighlights = useCallback((contentState: ContentState): ContentState => {
-      let newContentState = contentState;
-      const blockMap = newContentState.getBlockMap();
-      blockMap.forEach((block) => {
-        if (!block) return;
-        const blockKey = block.getKey();
-        const textLength = block.getLength();
-        let intervals: { start: number; end: number; tags: string[] }[] = [];
-        block!.findEntityRanges(
-          (character: CharacterMetadata) => {
-            const entityKey = character.getEntity();
-            if (!entityKey) return false;
+    let newContentState = contentState;
+    const blockMap = newContentState.getBlockMap();
+    blockMap.forEach((block) => {
+      if (!block) return;
+      const blockKey = block.getKey();
+      const textLength = block.getLength();
+      let intervals: { start: number; end: number; tags: string[] }[] = [];
+      
+      // Collect all highlight intervals in this block.
+      block.findEntityRanges(
+        (character: CharacterMetadata) => {
+          const entityKey = character.getEntity();
+          if (!entityKey) return false;
+          const entity = newContentState.getEntity(entityKey);
+          return entity.getType() === 'HIGHLIGHT';
+        },
+        (start: number, end: number) => {
+          const entityKey = block.getEntityAt(start);
+          if (entityKey) {
             const entity = newContentState.getEntity(entityKey);
-            return entity.getType() === 'HIGHLIGHT';
-          },
-          (start: number, end: number) => {
-            const entityKey = block!.getEntityAt(start);
-            if (entityKey) {
-              const entity = newContentState.getEntity(entityKey);
-              const { tags } = entity.getData();
-              intervals.push({ start, end, tags });
-            }
-          }
-        );
-        if (intervals.length === 0) return;
-        let boundaries = new Set<number>([0, textLength]);
-        intervals.forEach((interval) => {
-          boundaries.add(interval.start);
-          boundaries.add(interval.end);
-        });
-        const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
-        let entireSelection = SelectionState.createEmpty(blockKey).merge({
-          anchorOffset: 0,
-          focusOffset: textLength,
-        }) as SelectionState;
-        newContentState = Modifier.applyEntity(newContentState, entireSelection, null);
-        for (let i = 0; i < sortedBoundaries.length - 1; i++) {
-          const start = sortedBoundaries[i];
-          const end = sortedBoundaries[i + 1];
-          let unionTags: string[] = [];
-          intervals.forEach((interval) => {
-            if (interval.start <= start && interval.end >= end) {
-              unionTags = Array.from(new Set([...unionTags, ...interval.tags]));
-            }
-          });
-          if (unionTags.length > 0) {
-            const selection = SelectionState.createEmpty(blockKey).merge({
-              anchorOffset: start,
-              focusOffset: end,
-            }) as SelectionState;
-            newContentState = newContentState.createEntity('HIGHLIGHT', 'MUTABLE', { tags: unionTags });
-            const newEntityKey = newContentState.getLastCreatedEntityKey();
-            newContentState = Modifier.applyEntity(newContentState, selection, newEntityKey);
+            const { tags } = entity.getData();
+            intervals.push({ start, end, tags });
           }
         }
+      );
+      if (intervals.length === 0) return;
+      
+      // Create a set of boundaries where any highlight starts or ends.
+      let boundaries = new Set<number>([0, textLength]);
+      intervals.forEach((interval) => {
+        boundaries.add(interval.start);
+        boundaries.add(interval.end);
       });
-      return newContentState;
-    }, []);
+      const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
+      
+      // Clear out any existing highlight entities for the entire block.
+      let entireSelection = SelectionState.createEmpty(blockKey).merge({
+        anchorOffset: 0,
+        focusOffset: textLength,
+      }) as SelectionState;
+      newContentState = Modifier.applyEntity(newContentState, entireSelection, null);
+      
+      // For each segment between boundaries, compute the union of tags from overlapping highlights.
+      for (let i = 0; i < sortedBoundaries.length - 1; i++) {
+        const start = sortedBoundaries[i];
+        const end = sortedBoundaries[i + 1];
+        let unionTags: string[] = [];
+        intervals.forEach((interval) => {
+          if (interval.start <= start && interval.end >= end) {
+            unionTags = Array.from(new Set([...unionTags, ...interval.tags]));
+          }
+        });
+        // Reapply a highlight entity with the merged (nested) tags if any tags are present.
+        if (unionTags.length > 0) {
+          const selection = SelectionState.createEmpty(blockKey).merge({
+            anchorOffset: start,
+            focusOffset: end,
+          }) as SelectionState;
+          newContentState = newContentState.createEntity('HIGHLIGHT', 'MUTABLE', { tags: unionTags });
+          const newEntityKey = newContentState.getLastCreatedEntityKey();
+          newContentState = Modifier.applyEntity(newContentState, selection, newEntityKey);
+        }
+      }
+    });
+    return newContentState;
+  }, []);
 
   const deleteHighlight = useCallback(() => {
     if (editingHighlight) {
@@ -434,11 +430,10 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
     const { name, description, color } = tagData;
     const exists = projectTags.some((tag) => tag.name.toLowerCase() === name.toLowerCase());
     if (!exists) {
-      const newTags: TagData[] = [...projectTags, {
-        name, description, color,
-        type: '',
-        related: []
-      }];
+      const newTags: TagData[] = [
+        ...projectTags,
+        { name, description, color, type: 'generic', related: [] },
+      ];
       newTags.sort((a, b) => a.name.localeCompare(b.name));
       setProjectTags(newTags);
       console.log('Tag created:', { name, description, color });
@@ -455,11 +450,16 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
     const highlights = getHighlightsLocal(contentState);
     const counts: Record<string, number> = {};
     highlights.forEach((hl) => {
-      hl.tags.forEach((tag) => {
+      hl.tags.forEach((tag: string) => {
         counts[tag] = (counts[tag] || 0) + 1;
       });
     });
     return counts;
+  }
+
+  // Optionally, show a loading indicator until the document is fetched.
+  if (isLoading) {
+    return <div style={{ padding: '20px' }}>Loading document...</div>;
   }
 
   return (
@@ -545,4 +545,16 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
   );
 };
 
-export default CollaborativeEditorDraft;
+
+
+const App = () => {
+  const doc_id = "your-document-id"; // Replace with your actual document ID
+
+  return (
+    <DocumentProvider doc_id={doc_id}>
+      <CollaborativeEditorDraft doc_id={doc_id} />
+    </DocumentProvider>
+  );
+};
+
+export default App;
