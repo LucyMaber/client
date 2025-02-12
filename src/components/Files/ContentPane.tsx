@@ -364,7 +364,6 @@ function ContentPane({
           <div style={modalStyle}>
             <h4>Edit Tags for {taggingItem.name}</h4>
             <TagSelector
-              availableTags={availableTags}
               selectedTags={selectedTags}
               onToggleTag={handleToggleTag}
             />

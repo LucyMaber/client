@@ -491,7 +491,6 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
                   Select tags:
                 </label>
                 <TagSelector
-                  availableTags={projectTags}
                   selectedTags={selectedTags}
                   onToggleTag={onToggleTag}
                 />

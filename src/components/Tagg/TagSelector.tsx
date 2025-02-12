@@ -1,14 +1,18 @@
 import React from 'react';
 import { handlePrevent } from '../../Helper';
 import { TagData } from '../../types/TagData';
+import { useTagContext } from '../../providers/TagProvider';
 
 interface TagSelectorProps {
-  availableTags: TagData[];
   selectedTags: string[];
   onToggleTag: (tagName: string) => void;
 }
 
-const TagSelector: React.FC<TagSelectorProps> = ({ availableTags, selectedTags, onToggleTag }) => {
+const TagSelector: React.FC<TagSelectorProps> = ({ selectedTags, onToggleTag }) => {
+  // Get available tags from TagProvider
+  const { state } = useTagContext();
+  const availableTags: TagData[] = state.tags;
+
   // Handler for keyboard events to support toggling via Enter or Space.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, tagName: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -55,5 +59,6 @@ const TagSelector: React.FC<TagSelectorProps> = ({ availableTags, selectedTags, 
     </div>
   );
 };
+
 
 export default TagSelector;
