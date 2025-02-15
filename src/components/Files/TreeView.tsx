@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
+import { BreadcrumbData } from '../../types/Breadcrumb';
 
 // Define an interface for a folder node.
 export interface FolderNode {
   id: string;
   name: string;
+  path: string;
   folders?: FolderNode[];
 }
 
 // Define the props for the TreeView component.
 interface TreeViewProps {
-  folder: FolderNode;
-  path: string[];
-  onSelectFolder: (path: string[]) => void;
-  selectedPath: string[];
-  onDropItem?: (path: string[], itemData: string) => void;
+  folder: FolderNode
+  path: BreadcrumbData[];
+  onSelectFolder: (path: BreadcrumbData[]) => void;
+  selectedPath: BreadcrumbData[];
+  onDropItem?: (path: BreadcrumbData[], itemData: string) => void;
 }
 
 const TreeView: React.FC<TreeViewProps> = ({
@@ -98,7 +100,10 @@ const TreeView: React.FC<TreeViewProps> = ({
           <TreeView
             key={subFolder.id}
             folder={subFolder}
-            path={[...path, subFolder.id]}
+            path={[...path, {
+              label: subFolder.name,
+              path: subFolder.path
+            }]}
             onSelectFolder={onSelectFolder}
             selectedPath={selectedPath}
             onDropItem={onDropItem}

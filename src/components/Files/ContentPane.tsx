@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FolderIcon, FileIcon } from './Icons';
 import TagSelector from '../Tagg/TagSelector';
 import { TagData } from '../../types/TagData';
+import { FileEntry } from '../../providers/FileSystemProvider';
 
 const paneContainerStyle: React.CSSProperties = { padding: '20px' };
 
@@ -24,22 +25,34 @@ const modalStyle: React.CSSProperties = {
   minWidth: '300px',
 };
 
+interface FolderData {
+  name: string;
+  folders: FileEntry[];
+  files: FileEntry[];
+  // add additional properties if needed
+}
+
 interface ContentPaneProps {
-  currentFolder: any;
+  currentFolder: FolderData;
   currentPath: string[];
   onOpenFolder: (folderId: string) => void;
   viewMode: string;
   onChangeViewMode: (mode: string) => void;
-  onFileClick: (file: any) => void;
-  onSelectFile: (file: any) => void;
+  onFileClick: (file: FileEntry) => void;
+  onSelectFile: (file: FileEntry) => void;
   selectedFileId: string | null;
-  onFileContextMenu?: (file: any, event: React.MouseEvent) => void;
+  onFileContextMenu?: (file: FileEntry, event: React.MouseEvent) => void;
   onDropItem: (targetPath: string[], itemDataJson: string) => void;
-  onTagItem: (item: any, newTags: string[]) => void;
+  onTagItem: (item: FileEntry, newTags: string[]) => void;
   availableTags: TagData[];
 }
 
-function ContentPane({
+// Helper to combine a base path with a folder id.
+const combinePaths = (basePath: string, folderId: string): string => {
+  return basePath === '/' ? `/${folderId}` : `${basePath}/${folderId}`;
+};
+
+const ContentPane: React.FC<ContentPaneProps> = ({
   currentFolder,
   currentPath,
   onOpenFolder,
@@ -52,7 +65,7 @@ function ContentPane({
   onDropItem,
   onTagItem,
   availableTags,
-}: ContentPaneProps) {
+}) => {
   const [taggingItem, setTaggingItem] = useState<any>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
@@ -71,10 +84,10 @@ function ContentPane({
     );
   }
 
-  const formatExtension = (fileType: string) =>
+  const formatExtension = (fileType: string): string =>
     fileType ? (fileType.startsWith('.') ? fileType : '.' + fileType) : '';
 
-  const renderTags = (item: any) => {
+  const renderTags = (item: FileEntry) => {
     const tags = item.tags && item.tags.length ? item.tags.join(', ') : '';
     return (
       <span
@@ -86,7 +99,7 @@ function ContentPane({
           marginLeft: '5px',
           color: '#4e54c8',
           cursor: 'pointer',
-          fontSize: '0.8rem'
+          fontSize: '0.8rem',
         }}
       >
         {tags || 'Add Tag'}
@@ -94,10 +107,10 @@ function ContentPane({
     );
   };
 
-  const fileTooltip = (file: any) => {
+  const fileTooltip = (file: FileEntry): string => {
     const fileTags = file.tags && file.tags.length ? file.tags.join(', ') : 'None';
     const fileDesc = file.description || '';
-    return `${file.name} (${formatExtension(file.fileType)})\nTags: ${fileTags}\nDescription: ${fileDesc}`;
+    return `${file.name} (${formatExtension(file.fileType || '')})\nTags: ${fileTags}\nDescription: ${fileDesc}`;
   };
 
   const viewModeControls = (
@@ -116,7 +129,7 @@ function ContentPane({
             background: viewMode === mode ? '#4e54c8' : '#eee',
             color: viewMode === mode ? '#fff' : '#333',
             cursor: 'pointer',
-            transition: 'background 0.3s'
+            transition: 'background 0.3s',
           }}
         >
           {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -125,7 +138,7 @@ function ContentPane({
     </div>
   );
 
-  const fileItemProps = (file: any) => ({
+  const fileItemProps = (file: FileEntry) => ({
     draggable: true,
     title: fileTooltip(file),
     onDragStart: (e: React.DragEvent) => {
@@ -137,10 +150,10 @@ function ContentPane({
     onContextMenu: (e: React.MouseEvent) => {
       e.preventDefault();
       onFileContextMenu && onFileContextMenu(file, e);
-    }
+    },
   });
 
-  const folderItemProps = (folder: any) => ({
+  const folderItemProps = (folder: FileEntry) => ({
     draggable: true,
     title: `${folder.name}\nTags: ${folder.tags && folder.tags.length ? folder.tags.join(', ') : 'None'}`,
     onDragStart: (e: React.DragEvent) => {
@@ -149,14 +162,46 @@ function ContentPane({
         JSON.stringify({ type: 'folder', id: folder.id })
       );
     },
-    onContextMenu: (e: React.MouseEvent) => e.preventDefault()
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
   });
 
-  let content;
+  const handleFolderDrop = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    const itemData = e.dataTransfer.getData('application/json');
+    onDropItem([...currentPath, folderId], itemData);
+  };
+
+  const handleBlankDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const itemData = e.dataTransfer.getData('application/json');
+    onDropItem(currentPath, itemData);
+  };
+
+  const handleTagSave = () => {
+    onTagItem(taggingItem, selectedTags);
+    setTaggingItem(null);
+    setSelectedTags([]);
+  };
+
+  const handleTagCancel = () => {
+    setTaggingItem(null);
+    setSelectedTags([]);
+  };
+
+  const handleToggleTag = (tagName: string) => {
+    setSelectedTags((prevTags) =>
+      prevTags.includes(tagName)
+        ? prevTags.filter((t) => t !== tagName)
+        : [...prevTags, tagName]
+    );
+  };
+
+  let content: React.ReactNode = null;
+
   if (viewMode === 'icons') {
     content = (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-        {currentFolder.folders.map((folder: any) => (
+        {currentFolder.folders.map((folder: FileEntry) => (
           <div
             key={folder.id}
             {...folderItemProps(folder)}
@@ -164,15 +209,11 @@ function ContentPane({
               width: '100px',
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'transform 0.2s'
+              transition: 'transform 0.2s',
             }}
             onDoubleClick={() => onOpenFolder(folder.id)}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const itemData = e.dataTransfer.getData('application/json');
-              onDropItem([...currentPath, folder.id], itemData);
-            }}
+            onDrop={(e) => handleFolderDrop(e, folder.id)}
           >
             <div style={{ fontSize: '48px' }}>
               <FolderIcon style={{ fontSize: '48px' }} />
@@ -181,7 +222,7 @@ function ContentPane({
             <div>{renderTags(folder)}</div>
           </div>
         ))}
-        {currentFolder.files.map((file: any) => (
+        {currentFolder.files.map((file: FileEntry) => (
           <div
             key={file.id}
             {...fileItemProps(file)}
@@ -191,19 +232,23 @@ function ContentPane({
               cursor: 'pointer',
               border: selectedFileId === file.id ? '2px solid #4e54c8' : 'none',
               borderRadius: '4px',
-              transition: 'transform 0.2s'
+              transition: 'transform 0.2s',
             }}
             onClick={() => onSelectFile(file)}
             onDoubleClick={() => onFileClick(file)}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
           >
             <div style={{ fontSize: '48px' }}>
               <FileIcon style={{ fontSize: '48px' }} mimeType={file.mimeType} fileType={file.fileType} />
             </div>
             <div>{file.name}</div>
             <div style={{ fontSize: '0.8rem', color: '#888' }}>
-              {formatExtension(file.fileType)}
+              {formatExtension(file.fileType || '')}
             </div>
             <div>{renderTags(file)}</div>
           </div>
@@ -224,20 +269,16 @@ function ContentPane({
           </tr>
         </thead>
         <tbody>
-          {currentFolder.folders.map((folder: any) => (
+          {currentFolder.folders.map((folder: FileEntry) => (
             <tr
               key={folder.id}
               {...folderItemProps(folder)}
               style={{ cursor: 'pointer', transition: 'background 0.3s' }}
               onDoubleClick={() => onOpenFolder(folder.id)}
-              onMouseOver={(e) => { e.currentTarget.style.background = '#f0f0f0'; }}
-              onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#f0f0f0')}
+              onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const itemData = e.dataTransfer.getData('application/json');
-                onDropItem([...currentPath, folder.id], itemData);
-              }}
+              onDrop={(e) => handleFolderDrop(e, folder.id)}
             >
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>{folder.name}</td>
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>Folder</td>
@@ -247,23 +288,29 @@ function ContentPane({
               <td style={{ padding: '8px', border: '1px solid #ddd' }}></td>
             </tr>
           ))}
-          {currentFolder.files.map((file: any) => (
+          {currentFolder.files.map((file: FileEntry) => (
             <tr
               key={file.id}
               {...fileItemProps(file)}
               style={{
                 cursor: 'pointer',
                 background: selectedFileId === file.id ? '#e0edff' : 'transparent',
-                transition: 'background 0.3s'
+                transition: 'background 0.3s',
               }}
               onClick={() => onSelectFile(file)}
               onDoubleClick={() => onFileClick(file)}
-              onMouseOver={(e) => { if (selectedFileId !== file.id) e.currentTarget.style.background = '#f9f9f9'; }}
-              onMouseOut={(e) => { if (selectedFileId !== file.id) e.currentTarget.style.background = 'transparent'; }}
+              onMouseOver={(e) => {
+                if (selectedFileId !== file.id) e.currentTarget.style.background = '#f9f9f9';
+              }}
+              onMouseOut={(e) => {
+                if (selectedFileId !== file.id) e.currentTarget.style.background = 'transparent';
+              }}
             >
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>{file.name}</td>
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>File</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{formatExtension(file.fileType)}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {formatExtension(file.fileType)}
+              </td>
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>{file.mimeType}</td>
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>{renderTags(file)}</td>
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>{file.description}</td>
@@ -275,7 +322,7 @@ function ContentPane({
   } else if (viewMode === 'compact') {
     content = (
       <ul style={{ listStyle: 'none', padding: 0 }}>
-        {currentFolder.folders.map((folder: any) => (
+        {currentFolder.folders.map((folder: FileEntry) => (
           <li
             key={folder.id}
             {...folderItemProps(folder)}
@@ -283,22 +330,18 @@ function ContentPane({
               cursor: 'pointer',
               padding: '8px',
               borderBottom: '1px solid #eee',
-              transition: 'background 0.3s'
+              transition: 'background 0.3s',
             }}
             onDoubleClick={() => onOpenFolder(folder.id)}
-            onMouseOver={(e) => { e.currentTarget.style.background = '#f9f9f9'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#f9f9f9')}
+            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const itemData = e.dataTransfer.getData('application/json');
-              onDropItem([...currentPath, folder.id], itemData);
-            }}
+            onDrop={(e) => handleFolderDrop(e, folder.id)}
           >
             <FolderIcon style={{ marginRight: '5px' }} /> {folder.name} {renderTags(folder)}
           </li>
         ))}
-        {currentFolder.files.map((file: any) => (
+        {currentFolder.files.map((file: FileEntry) => (
           <li
             key={file.id}
             {...fileItemProps(file)}
@@ -307,16 +350,17 @@ function ContentPane({
               padding: '8px',
               borderBottom: '1px solid #eee',
               background: selectedFileId === file.id ? '#e0edff' : 'transparent',
-              transition: 'background 0.3s, transform 0.2s'
+              transition: 'background 0.3s, transform 0.2s',
             }}
             onClick={() => onSelectFile(file)}
             onDoubleClick={() => onFileClick(file)}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            <FileIcon style={{ marginRight: '5px' }} mimeType={file.mimeType} fileType={file.fileType} /> {file.name}{' '}
+            <FileIcon style={{ marginRight: '5px' }} mimeType={file.mimeType} fileType={file.fileType} />{' '}
+            {file.name}{' '}
             <span style={{ color: '#888', fontSize: '0.9rem' }}>
-              ({formatExtension(file.fileType)}) {renderTags(file)}
+              ({formatExtension(file.fileType || '')}) {renderTags(file)}
             </span>
           </li>
         ))}
@@ -324,36 +368,19 @@ function ContentPane({
     );
   }
 
-  const handleBlankDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const itemData = e.dataTransfer.getData('application/json');
-    onDropItem(currentPath, itemData);
-  };
-
-  const handleTagSave = () => {
-    onTagItem && onTagItem(taggingItem, selectedTags);
-    setTaggingItem(null);
-    setSelectedTags([]);
-  };
-
-  const handleTagCancel = () => {
-    setTaggingItem(null);
-    setSelectedTags([]);
-  };
-
-  const handleToggleTag = (tagName: string) => {
-    let newSelectedTags: string[];
-    if (selectedTags.includes(tagName)) {
-      newSelectedTags = selectedTags.filter((t) => t !== tagName);
-    } else {
-      newSelectedTags = [...selectedTags, tagName];
-    }
-    setSelectedTags(newSelectedTags);
-  };
-
   return (
-    <div style={paneContainerStyle} onDragOver={(e) => e.preventDefault()} onDrop={handleBlankDrop}>
-      <h3 style={{ borderBottom: '2px solid #4e54c8', paddingBottom: '5px', color: '#4e54c8' }}>
+    <div
+      style={paneContainerStyle}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleBlankDrop}
+    >
+      <h3
+        style={{
+          borderBottom: '2px solid #4e54c8',
+          paddingBottom: '5px',
+          color: '#4e54c8',
+        }}
+      >
         {currentFolder.name}
       </h3>
       {viewModeControls}
@@ -378,6 +405,6 @@ function ContentPane({
       )}
     </div>
   );
-}
+};
 
 export default ContentPane;

@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import Breadcrumb from './Breadcrumb';
+import { BreadcrumbData } from '../../types/Breadcrumb';
 
 // Define external style objects with proper typing.
 const navStyle: React.CSSProperties = {
@@ -29,7 +30,7 @@ interface LocalNavigationBarProps {
   canGoBack: boolean;
   canGoForward: boolean;
   fileSystem: any; // Replace 'any' with a more specific type if available.
-  onBreadcrumbSelect: (path: string[]) => void;
+  onBreadcrumbSelect: (path: BreadcrumbData[]) => void;
 }
 
 // LocalNavigationBar Component wrapped in React.memo for performance.

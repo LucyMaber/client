@@ -1,11 +1,13 @@
 import React from 'react';
 import TreeView from "./TreeView";
+import { BreadcrumbData } from '../../types/Breadcrumb';
 
 interface NavigationPaneProps {
   fileSystem: any; // You can replace 'any' with a more specific type if available.
-  currentPath: string[];
-  onSelectFolder: (path: string[]) => void;
-  onDropItem?: (path: string[], itemData: string) => void;
+  currentPath: BreadcrumbData[];
+  breadcrumbs: BreadcrumbData[];
+  onSelectFolder: (path: BreadcrumbData[]) => void;
+  onDropItem?: (path: BreadcrumbData[], itemData: string) => void;
 }
 
 const NavigationPane: React.FC<NavigationPaneProps> = ({
@@ -27,7 +29,7 @@ const NavigationPane: React.FC<NavigationPaneProps> = ({
       <h3 style={{ marginTop: 0, color: '#4e54c8' }}>Folders</h3>
       <TreeView
         folder={fileSystem}
-        path={['root']}
+        path={[{ label: 'root', "path":"/"}]}
         onSelectFolder={onSelectFolder}
         selectedPath={currentPath}
         onDropItem={onDropItem}

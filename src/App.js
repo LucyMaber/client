@@ -1,8 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Files from './pages/Files/Files';
+import Files from './pages/Files/FileBrowser';
 import CollaborativeEditor from './pages/CollaborativeTagger/CollaborativeTagger';
 import { TagProvider } from './providers/TagProvider';
+import { FileSystemProvider } from './providers/FileSystemProvider';
 
 import './App.css';
 
@@ -24,7 +25,14 @@ const App = () => {
           </ul>
         </nav>
         <Routes>
-          <Route path="/" element={<Files />} />
+          <Route
+            path="/"
+            element={
+              <FileSystemProvider>
+                <Files />
+              </FileSystemProvider>
+            }
+          />
           <Route path="/CollaborativeEditor" element={<CollaborativeEditor />} />
         </Routes>
       </Router>

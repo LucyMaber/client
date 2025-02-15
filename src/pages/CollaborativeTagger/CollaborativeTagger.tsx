@@ -31,6 +31,7 @@ import {
   SelectionRange
 } from '../../types/Doc';
 import { DocumentContext, DocumentProvider } from '../../providers/DocumentProvider';
+import  {Highlight} from '../../components/CollaborativeEditor/HighlightsDisplay';
 
 // ---------------------
 // Styling Objects
@@ -139,17 +140,10 @@ const getSelectionForEntityLocal = (
   return selection;
 };
 
-// Local interface for highlight details.
-interface LocalHighlight {
-  blockKey: string;
-  text: string;
-  tags: string[];
-  entityKey: string;
-}
 
 // Local version of getHighlights
-const getHighlightsLocal = (contentState: ContentState): LocalHighlight[] => {
-  const highlights: LocalHighlight[] = [];
+const getHighlightsLocal = (contentState: ContentState): Highlight[] => {
+  const highlights: Highlight[] = [];
   contentState.getBlockMap().forEach((block) => {
     if (!block) return;
     block.findEntityRanges(
@@ -164,7 +158,10 @@ const getHighlightsLocal = (contentState: ContentState): LocalHighlight[] => {
           const entity = contentState.getEntity(entityKey);
           const { tags } = entity.getData();
           const text = block.getText().slice(start, end);
-          highlights.push({ blockKey: block.getKey(), text, tags, entityKey });
+          highlights.push({
+            text, tags, entityKey,
+            blockKey: ''
+          });
         }
       }
     );
@@ -533,7 +530,7 @@ const CollaborativeEditorDraft: React.FC<CollaborativeEditorDraftProps> = ({
           )}
         </div>
         <HighlightsDisplay
-          contentState={editorState.getCurrentContent()}
+          contentState={getHighlightsLocal(editorState.getCurrentContent())}
           selectedTag={selectedTag}
         />
       </div>

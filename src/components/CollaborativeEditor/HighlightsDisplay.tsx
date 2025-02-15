@@ -2,16 +2,18 @@ import React, { useMemo } from 'react';
 import { getHighlights } from '../../Helper';
 
 // Define a type for individual highlight items.
-interface Highlight {
+export interface Highlight {
   blockKey: string;
   text: string;
   tags: string[];
+  entityKey: string;
+  
 }
 
 // Define props for the component.
 // You can update `contentState`'s type if a more specific type is available.
 interface HighlightsDisplayProps {
-  contentState?: any;
+  contentState?: Highlight[];
   selectedTag?: string|null;
 }
 

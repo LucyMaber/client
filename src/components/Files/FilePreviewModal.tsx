@@ -1,11 +1,8 @@
 import React from 'react';
+import { FileEntry } from '../../providers/FileSystemProvider';
 
 interface FilePreviewModalProps {
-  file: {
-    name: string;
-    description: string;
-    // Add other file properties if needed.
-  };
+  file: FileEntry;
   onClose: () => void;
 }
 

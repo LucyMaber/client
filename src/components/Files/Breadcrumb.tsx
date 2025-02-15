@@ -1,4 +1,5 @@
 import React from 'react';
+import { BreadcrumbData } from '../../types/Breadcrumb';
 
 // External style objects
 const containerStyle: React.CSSProperties = {
@@ -51,7 +52,7 @@ function getPathNames(fs: FileSystemNode | null, path: string[]): string[] {
 interface BreadcrumbProps {
   currentPath: string[];
   fileSystem: FileSystemNode | null;
-  onSelect: (path: string[]) => void;
+  onSelect: (path: BreadcrumbData[]) => void;
   separator?: React.ReactNode;
 }
 
@@ -72,7 +73,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
           <span key={pathForItem.join('-')}>
             <span
               style={itemStyle}
-              onClick={() => onSelect(pathForItem)}
+              onClick={() => onSelect(pathForItem.map((item) => ({ label: item, path: item })))}
               onMouseOver={(e) => ((e.target as HTMLElement).style.color = '#ffdd57')}
               onMouseOut={(e) => ((e.target as HTMLElement).style.color = '#fff')}
             >

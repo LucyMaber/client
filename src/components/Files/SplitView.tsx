@@ -1,30 +1,33 @@
 import React from 'react';
 import LocalNavigationBar from './LocalNavigationBar';
 import ContentPane from './ContentPane';
+import { BreadcrumbData } from '../../types/Breadcrumb';
+import { F } from 'react-router/dist/development/route-data-Cq_b5feC';
+import { FileEntry } from '../../providers/FileSystemProvider';
+
 
 interface SplitViewProps {
-  sourceFolder: any;
-  targetFolder: any;
+  sourceFolder: string;
+  targetFolder: string;
   sourceViewMode: string;
   targetViewMode: string;
   onChangeSourceViewMode: (mode: string) => void;
   onChangeTargetViewMode: (mode: string) => void;
-  onSourceFileSelect: (file: any) => void;
-  selectedSourceFile: any | null;
-  onTargetFileSelect: (file: any) => void;
-  selectedTargetFile: any | null;
-  onFilePreview: (file: any) => void;
+  onSourceFileSelect: (file: FileEntry) => void;
+  selectedSourceFile: FileEntry | null;
+  onTargetFileSelect: (file: FileEntry) => void;
+  selectedTargetFile: FileEntry | null;
+  onFilePreview: (file: FileEntry) => void;
   onCopyFileSourceToTarget: () => void;
   onMoveFileSourceToTarget: () => void;
   onCopyFileTargetToSource: () => void;
   onMoveFileTargetToSource: () => void;
   onSelectTargetFolder: (folderId: string) => void;
-  targetPath: string[];
   // Navigation props for source
   sourceCurrentPath: string[];
   sourceBackStack: string[][];
   sourceForwardStack: string[][];
-  onSourceBreadcrumbSelect: (path: string[]) => void;
+  onSourceBreadcrumbSelect: (path: BreadcrumbData[]) => void;
   onSourceBack: () => void;
   onSourceForward: () => void;
   onSourceReload: () => void;
@@ -32,7 +35,7 @@ interface SplitViewProps {
   targetCurrentPath: string[];
   targetBackStack: string[][];
   targetForwardStack: string[][];
-  onTargetBreadcrumbSelect: (path: string[]) => void;
+  onTargetBreadcrumbSelect: (path: BreadcrumbData[]) => void;
   onTargetBack: () => void;
   onTargetForward: () => void;
   onTargetReload: () => void;
@@ -44,7 +47,7 @@ interface SplitViewProps {
 interface NavigationProps {
   backStack: string[][];
   forwardStack: string[][];
-  onBreadcrumbSelect: (path: string[]) => void;
+  onBreadcrumbSelect: (path: BreadcrumbData[]) => void;
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
@@ -56,9 +59,9 @@ interface FilePaneProps {
   onOpenFolder: (folderId: string) => void;
   viewMode: string;
   onChangeViewMode: (mode: string) => void;
-  onFileClick: (file: any) => void;
-  onSelectFile: (file: any) => void;
-  selectedFile: any | null;
+  onFileClick: (file: FileEntry) => void;
+  onSelectFile: (file: FileEntry) => void;
+  selectedFile: FileEntry | null;
   navigation: NavigationProps;
   fileSystem: any;
   onDropItem?: (path: string[], itemData: string) => void;
@@ -130,7 +133,6 @@ const FilePane: React.FC<FilePaneProps> = ({
       >
         <ContentPane
           currentFolder={currentFolder}
-          currentPath={currentPath}
           onOpenFolder={onOpenFolder}
           viewMode={viewMode}
           onChangeViewMode={onChangeViewMode}
@@ -138,9 +140,10 @@ const FilePane: React.FC<FilePaneProps> = ({
           onSelectFile={onSelectFile}
           selectedFileId={selectedFile ? selectedFile.id : null}
           onFileContextMenu={noop}
-          onDropItem={onDropItem || noop}
           onTagItem={noop}
           availableTags={[]}
+          currentPath={currentPath}
+          onDropItem={onDropItem ? onDropItem : noop}
         />
       </div>
       {footer}
@@ -165,7 +168,6 @@ const SplitView: React.FC<SplitViewProps> = ({
   onCopyFileTargetToSource,
   onMoveFileTargetToSource,
   onSelectTargetFolder,
-  targetPath,
   sourceCurrentPath,
   sourceBackStack,
   sourceForwardStack,

@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import Breadcrumb from './Breadcrumb';
-
+import { BreadcrumbData } from '../../types/Breadcrumb';
 interface NavigationBarProps {
   currentPath: string[];
   onBack: () => void;
@@ -9,9 +9,10 @@ interface NavigationBarProps {
   canGoBack: boolean;
   canGoForward: boolean;
   fileSystem: any; // Replace 'any' with a more specific type if available.
-  onBreadcrumbSelect: (newPath: string[]) => void;
+  onBreadcrumbSelect: (newPath: BreadcrumbData[]) => void;
   onToggleSplitView: () => void;
   splitView: boolean;
+  breadcrumbs: BreadcrumbData[];
   createTag: () => void;
 }
 

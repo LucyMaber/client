@@ -10,13 +10,14 @@ import { TagData } from "../../types/TagData";
 import { SelectionRange } from "../../types/Doc";
 // Adjusted the path to match the actual location of your TagProvider file.
 import { useTagContext } from "../../providers/TagProvider";
+import { FileEntry } from "../../providers/FileSystemProvider";
 
 // --------------------- Props Interface ---------------------
 interface CreateTagPopupProps {
   onSubmit: (tagData: TagData) => void;
   onCancel: () => void;
   // For file connection tags:
-  targetFile?: { id: string; name: string };
+  targetFile?: FileEntry|null;
   // For highlight connection tags (the highlighted text is provided as an object):
   highlightedText?: { id: string; name: string; selection: SelectionRange };
 }
